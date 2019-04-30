@@ -85,6 +85,10 @@ function register(options) {
         , ...moved])
     {
         const m = _m;
+        if (!fs.existsSync(m.toResolved)) {
+            console.log('Using npm package for ' + m.from + ' because target does not exist: ' + m.toResolved);
+            continue;
+        }
         process.chdir(m.toResolved);
 
         const reg = tsNode.register();
