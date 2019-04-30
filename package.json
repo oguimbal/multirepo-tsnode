@@ -1,0 +1,14 @@
+{
+  "name": "multirepo-tsnode",
+  "version": "1.0.1",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+  },
+  "repository": {
+    "type": "github",
+    "url": "https://github.com/oguimbal/multirepo-tsnode"
+  },
+  "author": "Olivier Guimbal",
+  "license": "MIT"
+}
