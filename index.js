@@ -134,7 +134,11 @@ function register(options) {
                 // (might cause trouble with dependency injection, or with "instanceof")
                 {
                     const ret = path.normalize(main.rootResolved);
-                    return [ret, path.join(ret, 'node_modules')];
+                    return [ret,
+                        path.join(ret, 'node_modules'),
+                        path.join(rootResolved, 'node_modules'), // <= for packages only installed on target repository
+
+                    ];
                 }
             },
             resolveTarget(file) {
@@ -257,7 +261,16 @@ function register(options) {
             return originalResolveFilename(...arguments);
         const args = [...arguments];
         args[0] = targetFile;
-        return target.resolve(...args);
+        try {
+            return target.resolve(...args);
+        } catch (e) {
+            console.error('=> trying to resolve ', file);
+            console.error('=> from ', mod.filename);
+            console.error('=> in replacement ', source.rootResolved);
+            if (targetFile !== file)
+                console.error('=> modified resolution ', targetFile);
+            throw e;
+        }
     };
 
     // const oldRequire = Module.prototype.require;
