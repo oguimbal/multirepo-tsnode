@@ -135,11 +135,11 @@ function register(options) {
                 // (might cause trouble with dependency injection, or with "instanceof")
                 {
                     const ret = path.normalize(main.rootResolved);
-                    const final = new Set([ret,
+                    let final = [ret,
                         path.join(ret, 'node_modules'),
                         path.join(rootResolved, 'node_modules'), // <= for packages only installed on target repository
 
-                    ]);
+                    ];
                     
                     if (requestor && requestor.includes('/node_modules/')) {
                         const target = normalize(requestor).split(/\//g);
@@ -147,11 +147,14 @@ function register(options) {
                             target.pop();
                             const nmPath = path.join(...target, 'node_modules');
                             if (fs.existsSync(nmPath))
-                                final.add(nmPath);
+                                final.push(nmPath);
                         }
                     }
 
-                    return [...final];
+                    const unique = new Set();
+                    final = final.filter(x => unique.has(x) ? false : (unique.add(x) || true));
+
+                    return final;
                 }
             },
             resolveTarget(file) {
@@ -242,7 +245,19 @@ function register(options) {
                 return orig(...arguments);
             const args = [...arguments];
             args[1] = targetFile;
-            return (target.extensions[ext] || orig)(...args);
+            try {
+
+                return (target.extensions[ext] || orig)(...args);
+            } catch (e) {
+                const m = ['=> trying to resolve ' + file
+                            , '=> from ' + mod.filename
+                            , '=> in replacement ' + source.rootResolved
+                    ];
+                if (targetFile !== file)
+                    m.push('=> modified resolution ' + targetFile);
+                e.message = m.join('\n') + '\n\n' + e.message;
+                throw e;
+            }
         }
     });
 
@@ -277,11 +292,13 @@ function register(options) {
         try {
             return target.resolve(...args);
         } catch (e) {
-            // console.error('=> trying to resolve ', file);
-            // console.error('=> from ', mod.filename);
-            // console.error('=> in replacement ', source.rootResolved);
-            // if (targetFile !== file)
-            //     console.error('=> modified resolution ', targetFile);
+            const m = ['=> trying to resolve ' + file
+                        , '=> from ' + mod.filename
+                        , '=> in replacement ' + source.rootResolved
+                ];
+            if (targetFile !== file)
+                m.push('=> modified resolution ' + targetFile);
+            e.message = m.join('\n') + '\n\n' + e.message;
             throw e;
         }
     };
