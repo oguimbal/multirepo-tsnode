@@ -145,7 +145,7 @@ function register(options) {
                         const target = normalize(requestor).split(/\//g);
                         while (target.includes('node_modules')) {
                             target.pop();
-                            const nmPath = path.join(...target, 'node_modules');
+                            const nmPath = path.resolve([...target, 'node_modules'].join('/'));
                             if (fs.existsSync(nmPath))
                                 final.push(nmPath);
                         }
