@@ -106,8 +106,9 @@ function register(options) {
             cfg: {...m},
             tsconfig: tsconfig,
             rootResolved: rootResolved,
-            lookupPathsFor(file) {
+            lookupPathsFor(file, requestor) {
                 const fileNorm = normalize(file);
+                requestor = requestor ? normalize(requestor) : null;
                 for (const other of Object.keys(resolveBySource)) {
                     const target = resolveBySource[other];
                     if (fileNorm.startsWith(other) || (fileNorm + '/') === other) {
@@ -134,11 +135,23 @@ function register(options) {
                 // (might cause trouble with dependency injection, or with "instanceof")
                 {
                     const ret = path.normalize(main.rootResolved);
-                    return [ret,
+                    const final = new Set([ret,
                         path.join(ret, 'node_modules'),
                         path.join(rootResolved, 'node_modules'), // <= for packages only installed on target repository
 
-                    ];
+                    ]);
+                    
+                    if (requestor && requestor.includes('/node_modules/')) {
+                        const target = normalize(requestor).split(/\//g);
+                        while (target.includes('node_modules')) {
+                            target.pop();
+                            const nmPath = path.join(...target, 'node_modules');
+                            if (fs.existsSync(nmPath))
+                                final.add(nmPath);
+                        }
+                    }
+
+                    return [...final];
                 }
             },
             resolveTarget(file) {
@@ -210,8 +223,8 @@ function register(options) {
     function resolveSource(mod) {
         if (!mod || mod === process.mainModule)
             return main;
-        if (normalize(mod.filename).includes('/node_modules/'))
-            return null;
+        // if (normalize(mod.filename).includes('/node_modules/'))
+        //     return null;
         const ret = findParent(mod.filename, p => {
             return resolveBySource[p + '/'];
         });
@@ -245,7 +258,7 @@ function register(options) {
             if (!source)
                 return originalLookupPaths(...arguments);
             
-            const paths =  source.lookupPathsFor(file);
+            const paths =  source.lookupPathsFor(file, mod ? mod.filename : null);
             return paths || originalLookupPaths(...arguments);
         } finally {
             resolving = false;
@@ -264,11 +277,11 @@ function register(options) {
         try {
             return target.resolve(...args);
         } catch (e) {
-            console.error('=> trying to resolve ', file);
-            console.error('=> from ', mod.filename);
-            console.error('=> in replacement ', source.rootResolved);
-            if (targetFile !== file)
-                console.error('=> modified resolution ', targetFile);
+            // console.error('=> trying to resolve ', file);
+            // console.error('=> from ', mod.filename);
+            // console.error('=> in replacement ', source.rootResolved);
+            // if (targetFile !== file)
+            //     console.error('=> modified resolution ', targetFile);
             throw e;
         }
     };
