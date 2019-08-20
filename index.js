@@ -54,7 +54,7 @@ function register(options) {
             const target = normalize(path.resolve(options.cwd, p));
             if (config.__dirname.startsWith(target + '/'))
                 return false; // targets a child directory => ignore
-            
+
             // find a tsconfig.json that must be in parent of target
             return findParent(target, p => fs.existsSync(path.join(p, 'tsconfig.json')));
         }).map  (pk => {
@@ -96,7 +96,7 @@ function register(options) {
         const {config: tsconfig} = reg.ts.readConfigFile(tsconfigPath, x => fs.readFileSync(x, 'utf8'));
                 finalExtensions.add(...reg.extensions);
         tsconfigPaths.register();
-        
+
         // save handlers & undo registrations
         const rkey = m.from + '/';
         const rootResolved = normalize(path.dirname(tsconfigPath)) + '/';
@@ -117,7 +117,7 @@ function register(options) {
                         return [ret]
                     }
                 }
-                
+
                 for (const e of toHandle) {
                     // import 'src/path/to/file'
                     if (fs.existsSync(this.rootResolved + file + e) || fs.existsSync(this.rootResolved + file + '/index' + e)) {
@@ -140,7 +140,7 @@ function register(options) {
                         path.join(rootResolved, 'node_modules'), // <= for packages only installed on target repository
 
                     ];
-                    
+
                     if (requestor && requestor.includes('/node_modules/')) {
                         const target = normalize(requestor).split(/\//g);
                         while (target.includes('node_modules')) {
@@ -170,6 +170,8 @@ function register(options) {
                     if (fileNorm.startsWith(target.cfg.toResolved)) {
                         // import '/absolute/to/replaced/*'
                         const suffix = file.substr(target.cfg.toResolved.length);
+                        if (suffix.startsWith('node_modules\\'))
+                            continue;
                         return {
                             target: target,
                             targetFile: path.normalize(target.cfg.toResolved + suffix),
@@ -178,13 +180,15 @@ function register(options) {
                     if (fileNorm.startsWith(other)|| (fileNorm + '/') === other) {
                         // import 'replaced-module/*'
                         const suffix = file.substr(other.length);
+                        if (suffix.startsWith('node_modules\\'))
+                            continue;
                         return {
                             target: target,
                             targetFile: path.normalize(target.cfg.toResolved + suffix),
                         };
                     }
                 }
-                
+
                 for (const e of toHandle) {
                     // import 'src/path/to/file'
                     if (fs.existsSync(this.rootResolved + file + e) || fs.existsSync(this.rootResolved + file + '/index' + e)) {
@@ -272,14 +276,14 @@ function register(options) {
             const source = resolveSource(mod);
             if (!source)
                 return originalLookupPaths(...arguments);
-            
+
             const paths =  source.lookupPathsFor(file, mod ? mod.filename : null);
             return paths || originalLookupPaths(...arguments);
         } finally {
             resolving = false;
         }
     }
-    
+
     Module._resolveFilename = function (file, mod) {
         const source = resolveSource(mod);
         if (!source)
